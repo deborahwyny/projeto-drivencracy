@@ -31,11 +31,15 @@ const validadorPoll = joi.object({
 })
 
 /// endpoints
-app.post("/poll", async (res,req)=>{
+
+app.post("/poll", async (req, res)=>{
 
     const {title, expireAt} = req.body
-
     const data = Date.now()
+    const pollCriada = {
+        title: title, 
+        expireAt:data
+    }
 
 
     try{
@@ -44,7 +48,7 @@ app.post("/poll", async (res,req)=>{
         if(erro) return res.status(422).send("Title não pode ser uma string vazia")
 
 
-        await db.collection("/poll").insertOne({title:title , expireAt:expireAt})
+        await db.collection("/poll").insertOne({pollCriada})
 
 
         return res.sendStatus(201)
@@ -53,6 +57,40 @@ app.post("/poll", async (res,req)=>{
         res.status(500).send(err.message);
     }
 
+})
+
+app.get("/poll", async (req, res)=>{
+
+
+    try {
+
+        const listaPoll = await db.collection("/poll").find().toArray()
+        res.send(listaPoll)
+
+    } catch(err){
+        res.status(500).send(err.message)
+
+    }
+
+})
+
+app.post("/choice", async (req, res)=>{
+
+    const {title, pollId} = req.body
+    const choicePoll = {
+        title:title
+        
+    }
+
+
+    try {
+    
+
+        return res.sendStatus(201)
+
+    } catch(err){
+        res.status(500).send(err.message)
+    }
 })
 
 
