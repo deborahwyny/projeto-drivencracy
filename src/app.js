@@ -116,15 +116,29 @@ app.post("/choice", async (req, res)=>{
 
 app.get("/poll/:id/choice", async(req, res)=>{
 
+    const { id } = req.params
+
     try{
 
-        const enqueteDisponivel = await db.collection("/poll").findOne({_id: new ObjectId(_id)})
+        const enqueteDisponivel = await db.collection("/poll").findOne({_id: new ObjectId(id)})
         if(!enqueteDisponivel) return res.sendStatus(404)
 
         const listaChoice = await db.collection("/choice").find().toArray()
         res.send(listaChoice)
 
 
+
+    } catch(err){
+        res.status(500).send(err.message)
+    }
+})
+
+app.post("/choice/:id/vote", async (req, res)=>{
+
+
+    try {
+
+        return res.sendStatus(201)
 
     } catch(err){
         res.status(500).send(err.message)
