@@ -36,10 +36,10 @@ const validadorPoll = joi.object({
 app.post("/poll", async (req, res)=>{
 
     const {title, expireAt} = req.body
-    const validacao =  validadorPoll.validate({title})
-    if (validacao.error) {
-        return res.status(422).send(validacao.error.details.map(detail => detail.message))
-    }
+    // const validacao =  validadorPoll.validate({title})
+    // if (validacao.error) {
+    //     return res.status(422).send(validacao.error.details.map(detail => detail.message))
+    // }
 
 
     const data = Date.now()
@@ -55,6 +55,9 @@ app.post("/poll", async (req, res)=>{
 
 
     try{
+
+        const verificadorTitle = await db.collection("/poll").find({ title }).toArray();
+        if (verificadorTitle.length > 0) return res.sendStatus(422);
 
 
         await db.collection("/poll").insertOne(pollCriada)
@@ -83,21 +86,25 @@ app.get("/poll", async (req, res)=>{
 
 app.post("/choice", async (req, res)=>{
 
-    const {title} = req.body
-    const validacao =  validadorPoll.validate(req.body)
+    const {title, pollId} = req.body
+    const validacao =  validadorPoll.validate({title})
     if (validacao.error) {
         return res.status(422).send(validacao.error.details.map(detail => detail.message))
     }
     const choicePoll = {
         title:title,
-        pollId: ObjectId(pollId),
+        pollId: new ObjectId(pollId),
     }
 
 
     try {
 
-        const pollExistente = await db.collection("/poll").find({ _id: ObjectId(pollId)})
-        if(!pollExistente) return sendStatus(404)
+
+        const repetido = await db.collection("/poll").findOne({title})
+        if(repetido) return res.sendStatus(409)
+
+        const pollExistente = await db.collection("/poll").find({_id: new ObjectId(pollId) })
+        if(!pollExistente) return res.sendStatus(404)
     
         await db.collection("/choice").insertOne(choicePoll)
         return res.sendStatus(201)
@@ -107,9 +114,12 @@ app.post("/choice", async (req, res)=>{
     }
 })
 
-app.get("/choice", async(req, res)=>{
+app.get("/poll/:id/choice", async(req, res)=>{
 
     try{
+
+        const enqueteDisponivel = await db.collection("/poll").findOne({_id: new ObjectId(_id)})
+        if(!enqueteDisponivel) return res.sendStatus(404)
 
         const listaChoice = await db.collection("/choice").find().toArray()
         res.send(listaChoice)
