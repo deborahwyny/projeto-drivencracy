@@ -3,6 +3,8 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from "dotenv"
 import joi from "joi"
+import dayjs from 'dayjs'
+
 
 
 
@@ -31,24 +33,30 @@ const validadorPoll = joi.object({
 })
 
 /// endpoints
-
 app.post("/poll", async (req, res)=>{
 
     const {title, expireAt} = req.body
+
     const data = Date.now()
+    const horario = dayjs(data).format('YYYY-MM-DD HH:mm')
+    const expiracaoPadrao = new Date();
+    expiracaoPadrao.setDate(expiracaoPadrao.getDate() + 30);
+    const dataAutomatica = dayjs(expiracaoPadrao).format('YYYY-MM-DD HH:mm');
     const pollCriada = {
         title: title, 
-        expireAt:data
+        expireAt: expireAt? horario: dataAutomatica
     }
 
 
+
     try{
+
 
         const {erro} = validadorPoll.validate({title})
         if(erro) return res.status(422).send("Title não pode ser uma string vazia")
 
 
-        await db.collection("/poll").insertOne({pollCriada})
+        await db.collection("/poll").insertOne(pollCriada)
 
 
         return res.sendStatus(201)
@@ -78,14 +86,14 @@ app.post("/choice", async (req, res)=>{
 
     const {title, pollId} = req.body
     const choicePoll = {
-        title:title
-        
+        title:title,
+        pollId: ObjectId._id
     }
 
 
     try {
     
-
+        await db.collection("/choice").insertOne(choicePoll)
         return res.sendStatus(201)
 
     } catch(err){
