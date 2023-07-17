@@ -1,4 +1,4 @@
-import { MongoClient } from "mongodb"
+import { MongoClient,ObjectId } from "mongodb"
 import express from 'express'
 import cors from 'cors'
 import dotenv from "dotenv"
@@ -28,14 +28,19 @@ mongoClient.connect()
 
 const validadorPoll = joi.object({
     title: joi.string().required(),
-    expireAt: joi.string()
 
 })
+
 
 /// endpoints
 app.post("/poll", async (req, res)=>{
 
     const {title, expireAt} = req.body
+    const validacao =  validadorPoll.validate({title})
+    if (validacao.error) {
+        return res.status(422).send(validacao.error.details.map(detail => detail.message))
+    }
+
 
     const data = Date.now()
     const horario = dayjs(data).format('YYYY-MM-DD HH:mm')
@@ -52,13 +57,7 @@ app.post("/poll", async (req, res)=>{
     try{
 
 
-        const {erro} = validadorPoll.validate({title})
-        if(erro) return res.status(422).send("Title não pode ser uma string vazia")
-
-
         await db.collection("/poll").insertOne(pollCriada)
-
-
         return res.sendStatus(201)
 
     } catch(err){
@@ -84,14 +83,21 @@ app.get("/poll", async (req, res)=>{
 
 app.post("/choice", async (req, res)=>{
 
-    const {title, pollId} = req.body
+    const {title} = req.body
+    const validacao =  validadorPoll.validate(req.body)
+    if (validacao.error) {
+        return res.status(422).send(validacao.error.details.map(detail => detail.message))
+    }
     const choicePoll = {
         title:title,
-        pollId: ObjectId._id
+        pollId: ObjectId(pollId),
     }
 
 
     try {
+
+        const pollExistente = await db.collection("/poll").find({ _id: ObjectId(pollId)})
+        if(!pollExistente) return sendStatus(404)
     
         await db.collection("/choice").insertOne(choicePoll)
         return res.sendStatus(201)
@@ -101,6 +107,19 @@ app.post("/choice", async (req, res)=>{
     }
 })
 
+app.get("/choice", async(req, res)=>{
+
+    try{
+
+        const listaChoice = await db.collection("/choice").find().toArray()
+        res.send(listaChoice)
+
+
+
+    } catch(err){
+        res.status(500).send(err.message)
+    }
+})
 
 
 
