@@ -36,10 +36,10 @@ const validadorPoll = joi.object({
 app.post("/poll", async (req, res)=>{
 
     const {title, expireAt} = req.body
-    // const validacao =  validadorPoll.validate({title})
-    // if (validacao.error) {
-    //     return res.status(422).send(validacao.error.details.map(detail => detail.message))
-    // }
+    const validacao =  validadorPoll.validate({title})
+    if (validacao.error) {
+        return res.status(422).send(validacao.error.details.map(detail => detail.message))
+    }
 
 
     const data = Date.now()
@@ -100,11 +100,14 @@ app.post("/choice", async (req, res)=>{
     try {
 
 
-        const repetido = await db.collection("/poll").findOne({title})
+        const repetido = await db.collection("/choice").findOne({title})
         if(repetido) return res.sendStatus(409)
 
         const pollExistente = await db.collection("/poll").find({_id: new ObjectId(pollId) })
         if(!pollExistente) return res.sendStatus(404)
+        if (pollExistente.expireAt && dayjs(pollExistente.expireAt).isBefore(dayjs())) {
+            return res.sendStatus(403)
+          }        
     
         await db.collection("/choice").insertOne(choicePoll)
         return res.sendStatus(201)
@@ -123,8 +126,16 @@ app.get("/poll/:id/choice", async(req, res)=>{
         const enqueteDisponivel = await db.collection("/poll").findOne({_id: new ObjectId(id)})
         if(!enqueteDisponivel) return res.sendStatus(404)
 
-        const listaChoice = await db.collection("/choice").find().toArray()
-        res.send(listaChoice)
+        
+        const listaChoice = await db.collection("/choice").find({pollId: new ObjectId(id)}).toArray()
+        console.log("oi", listaChoice)
+        const objChoices = listaChoice.map(choice => ({
+            _id: choice._id.toString(),
+            title: choice.title,
+            pollId: choice.pollId.toString()
+          }))
+
+        res.send(objChoices)
 
 
 
@@ -134,11 +145,28 @@ app.get("/poll/:id/choice", async(req, res)=>{
 })
 
 app.post("/choice/:id/vote", async (req, res)=>{
+    const { id } = req.params
 
 
     try {
 
-        return res.sendStatus(201)
+        const choice = await db.collection("/choice").findOne({ _id: new ObjectId(id) });
+        if (!choice) return res.sendStatus(404)
+
+        const poll = await db.collection("/poll").findOne({ _id: choice.pollId });
+        if (!poll) return res.sendStatus(404)
+
+        if (poll.expireAt && dayjs(poll.expireAt).isBefore(dayjs())) return res.sendStatus(403)
+
+        const voto = {
+            pollId: choice.pollId,
+            choiceId: choice._id, 
+            createdAt: dayjs().toDate()
+        }
+
+        await db.collection("/voto").insertOne(voto)
+
+         res.sendStatus(201)
 
     } catch(err){
         res.status(500).send(err.message)
@@ -147,7 +175,9 @@ app.post("/choice/:id/vote", async (req, res)=>{
 
 
 
+
+
 ////
 /// porta sendo utilizada
-const PORT = 4000
+const PORT = 5000
 app.listen(PORT, () =>console.log(`servidor está rodando na porta ${PORT}`))
