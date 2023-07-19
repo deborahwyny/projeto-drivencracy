@@ -146,23 +146,19 @@ app.get("/poll/:id/choice", async(req, res)=>{
 
 app.post("/choice/:id/vote", async (req, res)=>{
     const { id } = req.params
-    console.log("Received choice ID:", id)
 
 
     try {
 
         const choice = await db.collection("/choice").findOne({ _id: new ObjectId(id) });
         if (!choice) return res.sendStatus(404)
-        console.log("oi:", choice)
 
 
         const poll = await db.collection("/poll").findOne({ _id: choice.pollId });
         if (!poll) return res.sendStatus(404)
-        console.log("oi2:", poll)
 
 
         if (poll.expireAt && dayjs(poll.expireAt).isBefore(dayjs())) return res.sendStatus(403)
-        console.log("oi3:")
 
 
 
@@ -172,8 +168,6 @@ app.post("/choice/:id/vote", async (req, res)=>{
             choiceId: choice._id,
             createdAt: dayjs().format("YYYY-MM-DD HH:mm"),
         };
-        console.log("teste", resultado)
-
 
 
         await db.collection("/voto").insertOne(resultado)
@@ -187,21 +181,34 @@ app.post("/choice/:id/vote", async (req, res)=>{
 
 app.get("/poll/:id/result", async(req, res)=>{
     const {id} = req.params
-
-    try{
-
-        const resultadoVoto = await db. collection("/voto").findOne({_id: new ObjectId(id)})
-        if(!resultadoVoto) return res.sendStatus(404)
-
-        const choice = await db.collection("/choice").findOne({_id: new ObjectId(id)})
-        if(!choice) return res.sendStatus(404)
-
-        const voto = {
-            title: resultadoVoto.title,
-            createdAt: resultadoVoto.createdAt,
-        }
+    console.log("id", id)
 
 
+    try {
+        console.log("aquii")
+        const poll = await db.collection("/poll").findOne({ _id: new ObjectId(id)  })
+        console.log("oi2", poll)
+        if (!poll) return res.sendStatus(404)
+    
+        const choices = await db.collection("/choice").find({ pollId: new ObjectId(id)}).toArray();
+        if (!choices) return res.sendStatus(404)
+        console.log("oi", choices)
+    
+    
+        let resultado = await Promise.all(
+          choices.map(async (choice) => {
+            const votos = await db
+              .collection("/voto")
+              .find({ choiceId: new ObjectId(choice._id)  })
+              .toArray();
+            return { title: choice.title, votes: votos.length }
+          })
+        )
+          console.log("aaaa", resultado)
+        resultado = resultado.sort((a, b) => b.votes - a.votes)
+        console.log("bbbbb", resultado)
+
+        res.status(201).send(resultado)
     }catch(err){
         res.status(500).send(err.message)
 
@@ -212,7 +219,8 @@ app.get("/poll/:id/result", async(req, res)=>{
 
 
 
-////
+
 /// porta sendo utilizada
+
 const PORT = 5000
 app.listen(PORT, () =>console.log(`servidor está rodando na porta ${PORT}`))
