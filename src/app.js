@@ -146,30 +146,65 @@ app.get("/poll/:id/choice", async(req, res)=>{
 
 app.post("/choice/:id/vote", async (req, res)=>{
     const { id } = req.params
+    console.log("Received choice ID:", id)
 
 
     try {
 
         const choice = await db.collection("/choice").findOne({ _id: new ObjectId(id) });
         if (!choice) return res.sendStatus(404)
+        console.log("oi:", choice)
+
 
         const poll = await db.collection("/poll").findOne({ _id: choice.pollId });
         if (!poll) return res.sendStatus(404)
+        console.log("oi2:", poll)
+
 
         if (poll.expireAt && dayjs(poll.expireAt).isBefore(dayjs())) return res.sendStatus(403)
+        console.log("oi3:")
 
-        const voto = {
+
+
+        const resultado = {
+            title: choice.title,
             pollId: choice.pollId,
-            choiceId: choice._id, 
-            createdAt: dayjs().toDate()
-        }
+            choiceId: choice._id,
+            createdAt: dayjs().format("YYYY-MM-DD HH:mm"),
+        };
+        console.log("teste", resultado)
 
-        await db.collection("/voto").insertOne(voto)
+
+
+        await db.collection("/voto").insertOne(resultado)
 
          res.sendStatus(201)
 
     } catch(err){
         res.status(500).send(err.message)
+    }
+})
+
+app.get("/poll/:id/result", async(req, res)=>{
+    const {id} = req.params
+
+    try{
+
+        const resultadoVoto = await db. collection("/voto").findOne({_id: new ObjectId(id)})
+        if(!resultadoVoto) return res.sendStatus(404)
+
+        const choice = await db.collection("/choice").findOne({_id: new ObjectId(id)})
+        if(!choice) return res.sendStatus(404)
+
+        const voto = {
+            title: resultadoVoto.title,
+            createdAt: resultadoVoto.createdAt,
+        }
+
+
+    }catch(err){
+        res.status(500).send(err.message)
+
     }
 })
 
