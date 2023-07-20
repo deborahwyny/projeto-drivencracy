@@ -222,5 +222,5 @@ app.get("/poll/:id/result", async(req, res)=>{
 
 /// porta sendo utilizada
 
-const PORT = 5000
-app.listen(PORT, () =>console.log(`servidor está rodando na porta ${PORT}`))
+const port = 5000
+app.listen(port, () =>console.log(`servidor está rodando na porta ${port}`))
